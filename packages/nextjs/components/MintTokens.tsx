@@ -1,7 +1,7 @@
 import type { NextPage } from "next";
 import { useState } from "react";
 import {
-  useScaffoldContractRead,
+  
   useScaffoldContractWrite,
   useTransactor,
 } from "~~/hooks/scaffold-eth";
