@@ -1,72 +1,72 @@
-//SPDX-License-Identifier: MIT
-pragma solidity >=0.8.0 <0.9.0;
+pragma solidity ^0.8.0;
 
-import "hardhat/console.sol";
-
-/**
- * A smart contract that allows changing a state variable of the contract and tracking the changes
- * It also allows the owner to withdraw the Ether in the contract
- * @author BuidlGuidl
- */
 contract YourContract {
+    string public name;
+    string public symbol;
+    uint8 public decimals;
+    uint256 public totalSupply;
 
-    // State Variables
-    address public immutable owner;
-    string public purpose = "Building Unstoppable Apps!!!";
-    bool public premium = false;
-    uint256 public totalCounter = 0;
-    mapping(address => uint) public userPurposeCounter;
+    mapping(address => uint256) public balances;
+    mapping(address => mapping(address => uint256)) public allowed;
 
-    // Events: a way to emit log statements from smart contract that can be listened to by external parties
-    event PurposeChange(address purposeSetter, string newPurpose, bool premium, uint256 value);
+   constructor(uint256 _initialSupply, string memory _tokenName, string memory _tokenSymbol, uint8 _tokenDecimals) {
+    totalSupply = _initialSupply * 10 ** uint256(_tokenDecimals);
+    balances[msg.sender] = totalSupply;
+    name = _tokenName;
+    symbol = _tokenSymbol;
+    decimals = _tokenDecimals;
+}
 
-    // Constructor: Called once on contract deployment
-    // Check packages/hardhat/deploy/00_deploy_your_contract.ts
-    constructor(address _owner) {
-        owner = _owner;
+    function transfer(address recipient, uint256 amount) public returns (bool) {
+        require(balances[msg.sender] >= amount, "Insufficient balance.");
+        require(balances[recipient] + amount >= balances[recipient], "Overflow.");
+
+        balances[msg.sender] -= amount;
+        balances[recipient] += amount;
+
+        emit Transfer(msg.sender, recipient, amount);
+
+        return true;
     }
 
-    // Modifier: used to define a set of rules that must be met before or after a function is executed
-    // Check the withdraw() function
-    modifier isOwner() {
-        // msg.sender: predefined variable that represents address of the account that called the current function
-        require(msg.sender == owner, "Not the Owner");
-        _;
+    function approve(address spender, uint256 amount) public returns (bool) {
+        allowed[msg.sender][spender] = amount;
+
+        emit Approval(msg.sender, spender, amount);
+
+        return true;
     }
 
-    /**
-     * Function that allows anyone to change the state variable:purpose of the contract and increase the counters
-     *
-     * @param _newPurpose (string memory) - new purpose of the contract
-     */
-    function setPurpose(string memory _newPurpose) public payable {
-        // Change state variables
-        purpose = _newPurpose;
-        totalCounter += 1;
-        userPurposeCounter[msg.sender] += 1;
+    function transferFrom(address sender, address recipient, uint256 amount) public returns (bool) {
+        require(balances[sender] >= amount, "Insufficient balance.");
+        require(balances[recipient] + amount >= balances[recipient], "Overflow.");
+        require(allowed[sender][msg.sender] >= amount, "Allowance insufficient.");
 
-        // msg.value: built-in global variable that represents the amount of ether sent with the transaction
-        if (msg.value > 0) {
-            premium = true;
-        } else {
-            premium = false;
-        }
+        balances[sender] -= amount;
+        balances[recipient] += amount;
+        allowed[sender][msg.sender] -= amount;
 
-        // emit: keyword used to trigger an event
-        emit PurposeChange(msg.sender, _newPurpose, msg.value > 0, 0);
+        emit Transfer(sender, recipient, amount);
+
+        return true;
     }
 
-    /**
-     * Function that allows the owner to withdraw all the Ether in the contract
-     * The function can only be called by the owner of the contract as defined by the isOwner modifier
-     */
-    function withdraw() isOwner public {
-        (bool success,) = owner.call{value: address(this).balance}("");
-        require(success, "Failed to send Ether");
+    function balanceOf(address account) public view returns (uint256) {
+        return balances[account];
     }
 
-    /**
-     * Function that allows the contract to receive ETH
-     */
-    receive() external payable {}
+    event Transfer(address indexed from, address indexed to, uint256 value);
+    event Approval(address indexed owner, address indexed spender, uint256 value);
+
+    function mint(address recipient, uint256 amount) public {
+    require(recipient != address(0), "Invalid address");
+    require(amount > 0, "Invalid amount");
+
+    totalSupply += amount;
+    balances[recipient] += amount;
+
+    emit Transfer(address(0), recipient, amount);
+    }
+
+
 }
